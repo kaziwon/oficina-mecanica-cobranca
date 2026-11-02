@@ -1,0 +1,78 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using OficinaMecanica.Cobranca.Application.Gateways;
+using OficinaMecanica.Cobranca.Application.UseCases.Auth;
+using OficinaMecanica.Cobranca.Application.UseCases.Orcamentos;
+using OficinaMecanica.Cobranca.Application.UseCases.Pagamentos;
+using OficinaMecanica.Cobranca.Infrastructure.Persistence;
+using OficinaMecanica.Cobranca.Infrastructure.Settings;
+using OficinaMecanica.Cobranca.Infrastructure.Sources;
+using OficinaMecanica.Cobranca.InterfaceAdapters.Controllers;
+using OficinaMecanica.Cobranca.InterfaceAdapters.DataSources;
+using OficinaMecanica.Cobranca.InterfaceAdapters.Gateways;
+
+namespace OficinaMecanica.Cobranca;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddCobranca(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddDbContext<AppDbContext>((provider, options) =>
+        {
+            var connection = provider.GetRequiredService<IConfiguration>().GetConnectionString("DefaultConnection");
+            options.UseMySql(connection, new MySqlServerVersion(new Version(8, 4, 0)));
+        });
+        services.AddOptions<JwtSettings>().Bind(configuration.GetSection("JwtSettings"))
+            .Validate(settings => Encoding.UTF8.GetByteCount(settings.SecretKey) >= 32,
+                "Configure JwtSettings:SecretKey com pelo menos 32 bytes.")
+            .Validate(settings => !string.IsNullOrWhiteSpace(settings.Issuer)
+                && !string.IsNullOrWhiteSpace(settings.Audience), "Configure issuer e audience do JWT.")
+            .ValidateOnStart();
+        services.AddOptions<AdminUserSettings>().Bind(configuration.GetSection("AdminUserSettings"))
+            .Validate(settings => !string.IsNullOrWhiteSpace(settings.Username)
+                && !string.IsNullOrWhiteSpace(settings.Password), "Configure as credenciais administrativas.")
+            .ValidateOnStart();
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+            .Configure<IOptions<JwtSettings>>((options, configured) =>
+            {
+                var jwt = configured.Value;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = jwt.Issuer,
+                    ValidAudience = jwt.Audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SecretKey)),
+                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
+        services.AddAuthorization();
+        services.AddScoped<IAdminUserSource, AdminUserSettingsSource>();
+        services.AddScoped<ITokenSource, JwtTokenSource>();
+        services.AddScoped<IOrcamentoDataSource, EfOrcamentoDataSource>();
+        services.AddScoped<IPagamentoDataSource, EfPagamentoDataSource>();
+        services.AddScoped<IAdminUserGateway, AdminUserGateway>();
+        services.AddScoped<ITokenGateway, TokenGateway>();
+        services.AddScoped<IOrcamentoGateway, OrcamentoGateway>();
+        services.AddScoped<IPagamentoGateway, PagamentoGateway>();
+        services.AddScoped<LoginUseCase>();
+        services.AddScoped<CriarOrcamentoUseCase>();
+        services.AddScoped<ObterOrcamentoPorIdUseCase>();
+        services.AddScoped<ObterTodosOrcamentosUseCase>();
+        services.AddScoped<AprovarOrcamentoUseCase>();
+        services.AddScoped<RecusarOrcamentoUseCase>();
+        services.AddScoped<RegistrarPagamentoPendenteUseCase>();
+        services.AddScoped<ObterPagamentoPorIdUseCase>();
+        services.AddScoped<AuthCleanController>();
+        services.AddScoped<OrcamentosCleanController>();
+        services.AddScoped<PagamentosCleanController>();
+        return services;
+    }
+}
