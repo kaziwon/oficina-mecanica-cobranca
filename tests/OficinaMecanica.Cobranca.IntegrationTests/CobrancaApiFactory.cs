@@ -16,6 +16,10 @@ public class CobrancaApiFactory : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection? _connection;
     private readonly string? _mysql;
+    private IHost? _host;
+
+    // O Pomelo acrescenta "__" e "_EFMigrationsLock"; o lock inteiro deve caber em 64 caracteres.
+    internal static string CriarNomeBancoTeste() => $"cob_test_{Guid.NewGuid():N}";
 
     public CobrancaApiFactory()
     {
@@ -24,7 +28,7 @@ public class CobrancaApiFactory : WebApplicationFactory<Program>
         {
             var settings = new MySqlConnectionStringBuilder(connection)
             {
-                Database = $"cobranca_test_{Guid.NewGuid():N}"
+                Database = CriarNomeBancoTeste()
             };
             _mysql = settings.ConnectionString;
         }
@@ -62,6 +66,7 @@ public class CobrancaApiFactory : WebApplicationFactory<Program>
     protected override IHost CreateHost(IHostBuilder builder)
     {
         var host = base.CreateHost(builder);
+        _host = host;
         using var scope = host.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         if (_mysql is not null) database.Database.Migrate();
@@ -71,12 +76,21 @@ public class CobrancaApiFactory : WebApplicationFactory<Program>
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing && _mysql is not null)
+        var host = _host;
+        _host = null;
+        try
         {
-            using var scope = Services.CreateScope();
-            scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureDeleted();
+            // Services iniciaria o host novamente se a primeira migracao tivesse falhado.
+            if (disposing && _mysql is not null && host is not null)
+            {
+                using var scope = host.Services.CreateScope();
+                scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureDeleted();
+            }
         }
-        base.Dispose(disposing);
-        if (disposing) _connection?.Dispose();
+        finally
+        {
+            base.Dispose(disposing);
+            if (disposing) _connection?.Dispose();
+        }
     }
 }

@@ -211,9 +211,13 @@ dotnet test OficinaMecanica.Cobranca.slnx --configuration Release --collect:"XPl
 unset MYSQL_TEST_CONNECTION_STRING
 ```
 
-Os testes criam e removem apenas bancos novos com prefixo `cobranca_test_`,
+Os testes criam e removem apenas bancos novos com prefixo `cob_test_`,
 sem tocar o banco da aplicacao. A conexao de testes deve permitir criar e
 remover esses bancos. Use-a somente em ambiente de desenvolvimento.
+
+O prefixo curto preserva o GUID completo e permite que o nome do lock de
+migracao gerado pelo Pomelo (`__NOME_DO_BANCO_EFMigrationsLock`) fique abaixo do
+limite de 64 caracteres do MySQL.
 
 No GitHub Actions, os jobs de build e testes sao separados. O job de testes
 inicia MySQL 8.4 temporario, configura a variavel acima, aplica as migracoes e
