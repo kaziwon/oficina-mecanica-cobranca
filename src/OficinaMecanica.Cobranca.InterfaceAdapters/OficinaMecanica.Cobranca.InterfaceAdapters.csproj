@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../OficinaMecanica.Cobranca.Application/OficinaMecanica.Cobranca.Application.csproj" />
+  </ItemGroup>
+</Project>
