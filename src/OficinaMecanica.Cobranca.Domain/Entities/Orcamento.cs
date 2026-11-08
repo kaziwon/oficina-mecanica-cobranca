@@ -7,6 +7,8 @@ public class Orcamento
     public Guid Id { get; private set; }
     public Guid OrdemServicoId { get; private set; }
     public Guid ExecucaoId { get; private set; }
+    public Guid? SagaId { get; private set; }
+    public Guid? PedidoGeracaoId { get; private set; }
     public string Diagnostico { get; private set; } = string.Empty;
     public StatusOrcamento Status { get; private set; }
     public decimal ValorTotal { get; private set; }
@@ -19,6 +21,14 @@ public class Orcamento
     public Pagamento? Pagamento { get; private set; }
 
     private Orcamento() { }
+
+    public void VincularSaga(Guid sagaId, Guid pedidoId)
+    {
+        if (sagaId == Guid.Empty || pedidoId == Guid.Empty || SagaId.HasValue)
+            throw new DadosInvalidosException("Vinculo de Saga invalido ou ja registrado.");
+        SagaId = sagaId;
+        PedidoGeracaoId = pedidoId;
+    }
 
     public static Orcamento Criar(Guid ordemServicoId, Guid execucaoId, string diagnostico, List<ItemOrcamento> itens)
     {

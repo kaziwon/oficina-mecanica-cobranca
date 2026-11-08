@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using OficinaMecanica.Cobranca.Domain.Entities;
+using OficinaMecanica.Cobranca.Infrastructure.Persistence.Models;
 
 namespace OficinaMecanica.Cobranca.Infrastructure.Persistence;
 
@@ -10,9 +11,22 @@ public class AppDbContext : DbContext
     public DbSet<ItemOrcamento> ItensOrcamento => Set<ItemOrcamento>();
     public DbSet<HistoricoOrcamento> HistoricoOrcamento => Set<HistoricoOrcamento>();
     public DbSet<Pagamento> Pagamentos => Set<Pagamento>();
+    public DbSet<MensagemInbox> Inbox => Set<MensagemInbox>();
+    public DbSet<MensagemOutbox> Outbox => Set<MensagemOutbox>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<MensagemInbox>(entity =>
+        {
+            entity.Property(item => item.Id).ValueGeneratedNever();
+            entity.Property(item => item.Hash).HasMaxLength(64).IsRequired();
+        });
+        modelBuilder.Entity<MensagemOutbox>(entity =>
+        {
+            entity.Property(item => item.Id).ValueGeneratedNever();
+            entity.Property(item => item.Body).IsRequired();
+            entity.HasIndex(item => new { item.PublicadaEm, item.CriadaEm });
+        });
         modelBuilder.Entity<Orcamento>(entity =>
         {
             entity.Property(item => item.Id).ValueGeneratedNever();

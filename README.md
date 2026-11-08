@@ -27,9 +27,33 @@ nao confirma recebimento de dinheiro e nao altera o status da OS. Nao existe
 endpoint para marcar pagamento como aprovado manualmente.
 
 Nesta etapa as APIs sao administrativas. O envio ao cliente, sua autorizacao
-para responder ao orcamento, a integracao com Mercado Pago, webhooks e a Saga
-serao implementados nos proximos incrementos. Nao ha rota publica de aprovacao
+para responder ao orcamento, o pagamento mock autorizado pelo professor,
+webhooks e as proximas etapas da Saga serao implementados depois. Nao ha rota publica de aprovacao
 nem webhook de pagamento sem verificacao.
+
+## Geracao por mensagens
+
+Quando `Messaging:Enabled=true`, o worker consome `GerarOrcamento` da fila
+`cobranca-comandos`. O use case valida o snapshot e calcula o total no dominio.
+Uma unica transacao MySQL grava orcamento, inbox e resposta na outbox.
+O worker publica `OrcamentoGerado` em `ordens-eventos`; somente entao Ordens
+tera uma confirmacao para colocar a OS em `AguardandoAprovacao`.
+
+Reentregas nao geram novo orcamento. O mesmo MessageId com outro conteudo e
+rejeitado. Um conflito com outro orcamento ou uma regra de negocio invalida
+gera `GeracaoOrcamentoRecusada`, com codigo e motivo. Falhas tecnicas de banco
+nao sao convertidas em recusas: permitem retentativa. O SDK SQS, EF e o hash
+da inbox ficam somente em Infrastructure, sem framework nas camadas internas.
+
+O [guia central de diagnostico e orcamento](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/03-diagnostico-orcamento.md)
+explica o contrato, o Compose integrado e o teste dos tres servicos. A API
+manual de criacao permanece disponivel. `Messaging:Enabled` e falso por padrao.
+As APIs de aprovar/recusar e registrar pendencia ainda nao publicam eventos.
+
+O CI inicia tambem ElasticMQ e define `SQS_TEST_ENDPOINT` para testar envio,
+reentrega e confirmacao pelo SDK, sem AWS. Na ausencia dessa variavel apenas
+o teste de transporte e marcado como ignorado; a persistencia e os handlers
+continuam sendo testados. As migrations agora incluem inbox e outbox.
 
 ## Clean Architecture
 
@@ -226,9 +250,9 @@ descartavel. Nao e necessario cadastrar Secrets nem usar a AWS.
 
 ## Proximos incrementos
 
-- Integracao real com Mercado Pago em ambiente de testes e verificacao de pagamento.
+- Pagamento mock autorizado pelo professor, com obtencao de token e chamada ao pagamento.
 - Envio do orcamento e autorizacao da resposta do cliente.
-- REST e mensageria com Ordens e Execucao, Saga, outbox e compensacoes.
+- Proximos eventos da Saga: resposta ao orcamento, pagamento e compensacoes.
 - BDD distribuido, Sonar e bloqueio por cobertura minima de 80%.
 - Kubernetes, Terraform, CD e observabilidade distribuida no New Relic.
 
