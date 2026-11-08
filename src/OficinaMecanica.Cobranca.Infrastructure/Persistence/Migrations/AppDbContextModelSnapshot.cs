@@ -108,8 +108,14 @@ namespace OficinaMecanica.Cobranca.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("OrdemServicoId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("PedidoGeracaoId")
+                        .HasColumnType("char(36)");
+
                     b.Property<DateTime?>("RespondidoEm")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("SagaId")
+                        .HasColumnType("char(36)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -171,6 +177,52 @@ namespace OficinaMecanica.Cobranca.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Pagamentos");
+                });
+
+            modelBuilder.Entity("OficinaMecanica.Cobranca.Infrastructure.Persistence.Models.MensagemInbox", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime>("ProcessadaEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("SagaId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Inbox");
+                });
+
+            modelBuilder.Entity("OficinaMecanica.Cobranca.Infrastructure.Persistence.Models.MensagemOutbox", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CriadaEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("PublicadaEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("SagaId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PublicadaEm", "CriadaEm");
+
+                    b.ToTable("Outbox");
                 });
 
             modelBuilder.Entity("OficinaMecanica.Cobranca.Domain.Entities.HistoricoOrcamento", b =>

@@ -48,7 +48,8 @@ public class CobrancaApiFactory : WebApplicationFactory<Program>
                 ["JwtSettings:SecretKey"] = "segredo-exclusivo-dos-testes-fase4-1234567890",
                 ["AdminUserSettings:Username"] = "admin",
                 ["AdminUserSettings:Password"] = "SenhaDosTestes@123",
-                ["Database:ApplyMigrations"] = "false"
+                ["Database:ApplyMigrations"] = "false",
+                ["Messaging:Enabled"] = "false"
             }));
         builder.ConfigureServices(services =>
         {

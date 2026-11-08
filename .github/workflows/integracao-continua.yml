@@ -26,6 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     services:
+      elasticmq:
+        image: softwaremill/elasticmq:1.7.1
+        ports: ["9324:9324"]
       mysql:
         image: mysql:8.4
         env:
@@ -37,6 +40,7 @@ jobs:
           --health-cmd="mysqladmin ping -h 127.0.0.1 -pCiCobranca123 --silent"
           --health-interval=5s --health-timeout=5s --health-retries=30
     env:
+      SQS_TEST_ENDPOINT: http://127.0.0.1:9324
       MYSQL_TEST_CONNECTION_STRING: 'Server=127.0.0.1;Port=3306;User=root;Password=CiCobranca123;AllowPublicKeyRetrieval=true;SslMode=None'
     steps:
       - uses: actions/checkout@v4
