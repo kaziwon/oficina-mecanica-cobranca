@@ -48,7 +48,15 @@ da inbox ficam somente em Infrastructure, sem framework nas camadas internas.
 O [guia central de diagnostico e orcamento](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/03-diagnostico-orcamento.md)
 explica o contrato, o Compose integrado e o teste dos tres servicos. A API
 manual de criacao permanece disponivel. `Messaging:Enabled` e falso por padrao.
-As APIs de aprovar/recusar e registrar pendencia ainda nao publicam eventos.
+As APIs de aprovar/recusar agora publicam eventos para orcamentos da Saga,
+gravados atomicamente com o estado e o historico. A correlacao original fica
+armazenada no orcamento; a migration recupera esse valor do evento de criacao
+para registros existentes. Repetir a mesma resposta nao produz outro evento.
+Registrar uma pendencia de pagamento ainda e uma operacao local.
+
+O [guia de resposta ao orcamento](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/04-resposta-orcamento.md)
+explica os eventos OrcamentoAprovado/OrcamentoRecusado e o roteiro HTTP. Aprovar
+deixa a OS em AguardandoPagamento, sem criar cobranca nem liberar reparo.
 
 O CI inicia tambem ElasticMQ e define `SQS_TEST_ENDPOINT` para testar envio,
 reentrega e confirmacao pelo SDK, sem AWS. Na ausencia dessa variavel apenas
@@ -94,9 +102,9 @@ transacao local, por um unico `SaveChanges`.
 | `Pagamentos` | Intencao de pagamento, valor, moeda BRL e status pendente |
 
 OS, execucao, servicos e pecas sao apenas referencias por ID, sem chaves
-estrangeiras para bancos de outros servicos. Nesta etapa os dados sao enviados
-manualmente por um administrador; ainda nao sao buscados ou validados via REST
-em Ordens/Execucao. O catalogo nao e duplicado: apenas a copia dos itens daquele
+estrangeiras para bancos de outros servicos. Os dados podem chegar pelo snapshot
+do diagnostico na mensageria ou pela API administrativa. Nao sao buscados via
+consulta direta aos bancos de Ordens/Execucao. O catalogo nao e duplicado: apenas a copia dos itens daquele
 orcamento e persistida.
 
 - Um orcamento por OS e por execucao neste incremento, garantido por indices unicos.
@@ -110,8 +118,9 @@ orcamento e persistida.
 - Repetir o registro de pagamento devolve o mesmo ID, sem uma segunda cobranca.
 - Versao e indices protegem contra concorrencia; HTTP 409 pede nova consulta e tentativa.
 
-A consistencia acima e **local** ao banco de Cobranca. Outbox, deduplicacao de
-mensagens, compensacoes e coordenacao distribuida ainda serao feitos na Saga.
+A consistencia acima e local ao banco de Cobranca. Outbox e deduplicacao ligam
+essas transacoes a Saga orquestrada por Ordens. A recusa ja solicita a retirada
+da execucao nao liberada; compensacoes financeiras ficam para a etapa de pagamento.
 
 ## Executar localmente
 
@@ -252,7 +261,7 @@ descartavel. Nao e necessario cadastrar Secrets nem usar a AWS.
 
 - Pagamento mock autorizado pelo professor, com obtencao de token e chamada ao pagamento.
 - Envio do orcamento e autorizacao da resposta do cliente.
-- Proximos eventos da Saga: resposta ao orcamento, pagamento e compensacoes.
+- Proximos eventos da Saga: pagamento e compensacoes financeiras.
 - BDD distribuido, Sonar e bloqueio por cobertura minima de 80%.
 - Kubernetes, Terraform, CD e observabilidade distribuida no New Relic.
 

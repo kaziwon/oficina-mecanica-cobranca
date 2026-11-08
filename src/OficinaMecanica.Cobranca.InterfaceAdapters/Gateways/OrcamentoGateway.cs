@@ -12,5 +12,5 @@ public class OrcamentoGateway : IOrcamentoGateway
     public Orcamento? ObterPorOrdemServicoId(Guid ordemServicoId) => _source.ObterPorOrdemServicoId(ordemServicoId);
     public List<Orcamento> ObterTodos(StatusOrcamento? status, Guid? ordemServicoId) => _source.ObterTodos(status, ordemServicoId);
     public void Inserir(Orcamento orcamento) => _source.Inserir(orcamento);
-    public void Salvar(Orcamento orcamento) => _source.Salvar(orcamento);
+    public void Salvar(Orcamento orcamento, Application.Messaging.MensagemIntegracao? evento = null) => _source.Salvar(orcamento, evento);
 }

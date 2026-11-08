@@ -56,7 +56,7 @@ public class ProcessarPedidoOrcamentoUseCase
                         PrecoUnitario = item.PrecoUnitario
                     }).ToList()
                 });
-                orcamento.VincularSaga(pedido.SagaId, pedido.MessageId);
+                orcamento.VincularSaga(pedido.SagaId, pedido.MessageId, pedido.CorrelationId);
             }
             catch (Exception exception) when (exception is ValidacaoException or DadosInvalidosException)
             { codigo = "DadosInvalidos"; motivo = exception.Message; }

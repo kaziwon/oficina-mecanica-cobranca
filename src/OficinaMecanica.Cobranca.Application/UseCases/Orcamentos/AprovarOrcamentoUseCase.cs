@@ -13,7 +13,7 @@ public class AprovarOrcamentoUseCase
     {
         var orcamento = _orcamentos.ObterPorId(id);
         if (orcamento is null) return null;
-        if (orcamento.Aprovar()) _orcamentos.Salvar(orcamento);
+        if (orcamento.Aprovar()) _orcamentos.Salvar(orcamento, RespostaOrcamentoMensagemMapper.Mapear(orcamento));
         return OrcamentoOutputMapper.Mapear(orcamento);
     }
 }
