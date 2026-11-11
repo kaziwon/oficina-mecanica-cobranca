@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
 using OficinaMecanica.Cobranca.Application.Exceptions;
+using OficinaMecanica.Cobranca.Application.Messaging;
+using OficinaMecanica.Cobranca.Infrastructure.Messaging;
+using OficinaMecanica.Cobranca.Infrastructure.Persistence.Models;
 using OficinaMecanica.Cobranca.Domain.Entities;
 using OficinaMecanica.Cobranca.Infrastructure.Persistence;
 using OficinaMecanica.Cobranca.InterfaceAdapters.DataSources;
@@ -34,10 +37,13 @@ public class EfOrcamentoDataSource : IOrcamentoDataSource
         Salvar(orcamento);
     }
 
-    public void Salvar(Orcamento orcamento)
+    public void Salvar(Orcamento orcamento, MensagemIntegracao? evento = null)
     {
         try
         {
+            if (evento is not null)
+                _database.Outbox.Add(new MensagemOutbox
+                { Id = evento.MessageId, SagaId = evento.SagaId, Body = MensagemSerializer.Serializar(evento), CriadaEm = evento.OccurredAt });
             _database.SaveChanges();
         }
         catch (DbUpdateConcurrencyException)

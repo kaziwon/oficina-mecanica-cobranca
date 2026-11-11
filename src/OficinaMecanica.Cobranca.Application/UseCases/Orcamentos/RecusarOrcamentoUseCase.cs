@@ -14,7 +14,7 @@ public class RecusarOrcamentoUseCase
     {
         var orcamento = _orcamentos.ObterPorId(id);
         if (orcamento is null) return null;
-        if (orcamento.Recusar(input.Motivo)) _orcamentos.Salvar(orcamento);
+        if (orcamento.Recusar(input.Motivo)) _orcamentos.Salvar(orcamento, RespostaOrcamentoMensagemMapper.Mapear(orcamento));
         return OrcamentoOutputMapper.Mapear(orcamento);
     }
 }

@@ -14,6 +14,8 @@ public class OrcamentoGatewayFake : IOrcamentoGateway, IPagamentoGateway
         .Where(item => !status.HasValue || item.Status == status)
         .Where(item => !ordemServicoId.HasValue || item.OrdemServicoId == ordemServicoId).ToList();
     public void Inserir(Orcamento orcamento) { Orcamentos.Add(orcamento); Gravacoes++; }
-    public void Salvar(Orcamento orcamento) { Gravacoes++; }
+    public Application.Messaging.MensagemIntegracao? UltimoEvento { get; private set; }
+    public void Salvar(Orcamento orcamento, Application.Messaging.MensagemIntegracao? evento = null)
+    { Gravacoes++; UltimoEvento = evento; }
     Pagamento? IPagamentoGateway.ObterPorId(Guid id) => Orcamentos.Select(item => item.Pagamento).SingleOrDefault(item => item?.Id == id);
 }

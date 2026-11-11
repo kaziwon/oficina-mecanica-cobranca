@@ -18,17 +18,17 @@ intactos.
 
 ```text
 Orcamento: AguardandoAprovacao -> Aprovado ou Recusado
-Pagamento: Pendente (somente para orcamento aprovado)
+Pagamento: Pendente -> Confirmado, Recusado ou FalhaRequerIntervencao
 ```
 
-**Ainda nao ha integracao com Mercado Pago.** O registro pendente e apenas uma
-intencao local de pagamento: nao cria Pix, checkout ou transacao no provedor,
-nao confirma recebimento de dinheiro e nao altera o status da OS. Nao existe
-endpoint para marcar pagamento como aprovado manualmente.
+**O pagamento usa o mock autorizado pelo professor, nao o Mercado Pago real.**
+O worker obtem token e chama um provedor HTTP ficticio, com idempotencia e
+persistencia. O resultado segue para a Saga. Nao movimenta dinheiro nem cria
+Pix/checkout real. A API manual de pendencia nao permite marcar pagamento como pago.
 
 Nesta etapa as APIs sao administrativas. O envio ao cliente, sua autorizacao
-para responder ao orcamento, o pagamento mock autorizado pelo professor,
-webhooks e as proximas etapas da Saga serao implementados depois. Nao ha rota publica de aprovacao
+para responder ao orcamento, webhooks reais e as proximas etapas da Saga
+serao implementados depois. Nao ha rota publica de aprovacao
 nem webhook de pagamento sem verificacao.
 
 ## Geracao por mensagens
@@ -48,7 +48,32 @@ da inbox ficam somente em Infrastructure, sem framework nas camadas internas.
 O [guia central de diagnostico e orcamento](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/03-diagnostico-orcamento.md)
 explica o contrato, o Compose integrado e o teste dos tres servicos. A API
 manual de criacao permanece disponivel. `Messaging:Enabled` e falso por padrao.
-As APIs de aprovar/recusar e registrar pendencia ainda nao publicam eventos.
+As APIs de aprovar/recusar agora publicam eventos para orcamentos da Saga,
+gravados atomicamente com o estado e o historico. A correlacao original fica
+armazenada no orcamento; a migration recupera esse valor do evento de criacao
+para registros existentes. Repetir a mesma resposta nao produz outro evento.
+Registrar uma pendencia manual ainda e local. Novos comandos SolicitarPagamento
+da Saga vinculam uma pendencia duravel ao processamento HTTP do mock.
+
+O [guia de resposta ao orcamento](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/04-resposta-orcamento.md)
+explica os eventos OrcamentoAprovado/OrcamentoRecusado e o roteiro HTTP. Aprovar
+deixa inicialmente a OS em AguardandoPagamento. O incremento de pagamento mock
+agora completa a parte financeira, sem liberar reparo.
+
+## Pagamento mock
+
+O [guia de pagamento mock](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/05-pagamento-mock.md)
+descreve o provedor ficticio em tools/OficinaMecanica.PagamentoMock, a obtencao
+de token e os modos approved/rejected/unavailable. Ele e ferramenta de teste
+no mesmo repositorio, nao um quarto servico de negocio.
+
+O use case depende de IPagamentoProvedorGateway; HttpClient e credenciais ficam
+em Infrastructure. Pendencia/inbox sao gravadas antes do HTTP; resultado e
+outbox sao gravados juntos depois. A chave e o ID persistido do pagamento.
+Timeout nao e recusa: apos retentativas, resultado desconhecido exige
+reconciliacao sem presumir que nao houve cobranca. PagamentoMock:Enabled e
+falso por padrao e habilitado no Compose integrado. O CI testa o mock em processo,
+inclusive reinicio, concorrencia e falha de gravacao depois da resposta HTTP.
 
 O CI inicia tambem ElasticMQ e define `SQS_TEST_ENDPOINT` para testar envio,
 reentrega e confirmacao pelo SDK, sem AWS. Na ausencia dessa variavel apenas
@@ -91,12 +116,12 @@ transacao local, por um unico `SaveChanges`.
 | `Orcamentos` | IDs externos da OS/execucao, diagnostico, total, resposta e versao |
 | `ItensOrcamento` | Tipo, referencia externa, nome, quantidade e preco copiados |
 | `HistoricoOrcamento` | Entrada em cada status, horario UTC e motivo |
-| `Pagamentos` | Intencao de pagamento, valor, moeda BRL e status pendente |
+| `Pagamentos` | Valor, moeda BRL, estado, contexto da Saga, provedor e retentativas |
 
 OS, execucao, servicos e pecas sao apenas referencias por ID, sem chaves
-estrangeiras para bancos de outros servicos. Nesta etapa os dados sao enviados
-manualmente por um administrador; ainda nao sao buscados ou validados via REST
-em Ordens/Execucao. O catalogo nao e duplicado: apenas a copia dos itens daquele
+estrangeiras para bancos de outros servicos. Os dados podem chegar pelo snapshot
+do diagnostico na mensageria ou pela API administrativa. Nao sao buscados via
+consulta direta aos bancos de Ordens/Execucao. O catalogo nao e duplicado: apenas a copia dos itens daquele
 orcamento e persistida.
 
 - Um orcamento por OS e por execucao neste incremento, garantido por indices unicos.
@@ -110,8 +135,9 @@ orcamento e persistida.
 - Repetir o registro de pagamento devolve o mesmo ID, sem uma segunda cobranca.
 - Versao e indices protegem contra concorrencia; HTTP 409 pede nova consulta e tentativa.
 
-A consistencia acima e **local** ao banco de Cobranca. Outbox, deduplicacao de
-mensagens, compensacoes e coordenacao distribuida ainda serao feitos na Saga.
+A consistencia acima e local ao banco de Cobranca. Outbox e deduplicacao ligam
+essas transacoes a Saga orquestrada por Ordens. A recusa ja solicita a retirada
+da execucao nao liberada; compensacoes financeiras ficam para a etapa de pagamento.
 
 ## Executar localmente
 
@@ -250,9 +276,9 @@ descartavel. Nao e necessario cadastrar Secrets nem usar a AWS.
 
 ## Proximos incrementos
 
-- Pagamento mock autorizado pelo professor, com obtencao de token e chamada ao pagamento.
+- Reconciliacao e compensacoes financeiras; contrato de producao somente se exigido.
 - Envio do orcamento e autorizacao da resposta do cliente.
-- Proximos eventos da Saga: resposta ao orcamento, pagamento e compensacoes.
+- Integracao da liberacao/finalizacao do reparo com a Saga.
 - BDD distribuido, Sonar e bloqueio por cobertura minima de 80%.
 - Kubernetes, Terraform, CD e observabilidade distribuida no New Relic.
 

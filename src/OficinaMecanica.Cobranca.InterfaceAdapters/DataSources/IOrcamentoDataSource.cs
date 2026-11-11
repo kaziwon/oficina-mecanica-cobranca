@@ -8,5 +8,5 @@ public interface IOrcamentoDataSource
     Orcamento? ObterPorOrdemServicoId(Guid ordemServicoId);
     List<Orcamento> ObterTodos(StatusOrcamento? status, Guid? ordemServicoId);
     void Inserir(Orcamento orcamento);
-    void Salvar(Orcamento orcamento);
+    void Salvar(Orcamento orcamento, Application.Messaging.MensagemIntegracao? evento = null);
 }

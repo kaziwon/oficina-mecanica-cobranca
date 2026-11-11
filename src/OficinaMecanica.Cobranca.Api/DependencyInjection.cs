@@ -56,6 +56,26 @@ public static class DependencyInjection
                 };
             });
         services.AddAuthorization();
+        services.AddOptions<PagamentoMockSettings>().Bind(configuration.GetSection("PagamentoMock"))
+            .Validate(settings => !settings.Enabled || (Uri.TryCreate(settings.BaseUrl, UriKind.Absolute, out var uri)
+                && uri.Scheme is "http" or "https" && string.IsNullOrEmpty(uri.UserInfo)
+                && !string.IsNullOrWhiteSpace(settings.ClientId) && !string.IsNullOrWhiteSpace(settings.ClientSecret)
+                && settings.MaxTentativas is >= 1 and <= 20 && settings.IntervaloRetentativaSegundos is >= 1 and <= 3600),
+                "Configure URL, credenciais e retentativas do pagamento mock.").ValidateOnStart();
+        services.AddHttpClient<IPagamentoProvedorSource, HttpPagamentoMockSource>((provider, http) =>
+        {
+            var settings = provider.GetRequiredService<IOptions<PagamentoMockSettings>>().Value;
+            if (settings.Enabled) http.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
+            http.Timeout = TimeSpan.FromSeconds(8);
+        });
+        services.AddScoped<IPagamentoProvedorGateway, PagamentoProvedorGateway>();
+        services.AddScoped<IPagamentoIntegracaoDataSource, EfPagamentoIntegracaoDataSource>();
+        services.AddScoped<IPagamentoIntegracaoGateway, PagamentoIntegracaoGateway>();
+        services.AddScoped<IPagamentoProcessamentoDataSource, EfPagamentoProcessamentoDataSource>();
+        services.AddScoped<IPagamentoProcessamentoGateway, PagamentoProcessamentoGateway>();
+        services.AddScoped<SolicitarPagamentoUseCase>();
+        services.AddScoped<ProcessarPagamentoUseCase>();
+        services.AddHostedService<PagamentoWorker>();
         services.Configure<MessagingSettings>(configuration.GetSection("Messaging"));
         services.AddSingleton<SqsTransport>();
         services.AddHostedService<IntegracaoWorker>();

@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/tools/">
+    <Project Path="tools/OficinaMecanica.PagamentoMock/OficinaMecanica.PagamentoMock.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/OficinaMecanica.Cobranca.Api/OficinaMecanica.Cobranca.Api.csproj" />
     <Project Path="src/OficinaMecanica.Cobranca.Application/OficinaMecanica.Cobranca.Application.csproj" />
