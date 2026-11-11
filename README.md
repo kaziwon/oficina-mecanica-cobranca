@@ -18,17 +18,17 @@ intactos.
 
 ```text
 Orcamento: AguardandoAprovacao -> Aprovado ou Recusado
-Pagamento: Pendente (somente para orcamento aprovado)
+Pagamento: Pendente -> Confirmado, Recusado ou FalhaRequerIntervencao
 ```
 
-**Ainda nao ha integracao com Mercado Pago.** O registro pendente e apenas uma
-intencao local de pagamento: nao cria Pix, checkout ou transacao no provedor,
-nao confirma recebimento de dinheiro e nao altera o status da OS. Nao existe
-endpoint para marcar pagamento como aprovado manualmente.
+**O pagamento usa o mock autorizado pelo professor, nao o Mercado Pago real.**
+O worker obtem token e chama um provedor HTTP ficticio, com idempotencia e
+persistencia. O resultado segue para a Saga. Nao movimenta dinheiro nem cria
+Pix/checkout real. A API manual de pendencia nao permite marcar pagamento como pago.
 
 Nesta etapa as APIs sao administrativas. O envio ao cliente, sua autorizacao
-para responder ao orcamento, o pagamento mock autorizado pelo professor,
-webhooks e as proximas etapas da Saga serao implementados depois. Nao ha rota publica de aprovacao
+para responder ao orcamento, webhooks reais e as proximas etapas da Saga
+serao implementados depois. Nao ha rota publica de aprovacao
 nem webhook de pagamento sem verificacao.
 
 ## Geracao por mensagens
@@ -52,11 +52,28 @@ As APIs de aprovar/recusar agora publicam eventos para orcamentos da Saga,
 gravados atomicamente com o estado e o historico. A correlacao original fica
 armazenada no orcamento; a migration recupera esse valor do evento de criacao
 para registros existentes. Repetir a mesma resposta nao produz outro evento.
-Registrar uma pendencia de pagamento ainda e uma operacao local.
+Registrar uma pendencia manual ainda e local. Novos comandos SolicitarPagamento
+da Saga vinculam uma pendencia duravel ao processamento HTTP do mock.
 
 O [guia de resposta ao orcamento](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/04-resposta-orcamento.md)
 explica os eventos OrcamentoAprovado/OrcamentoRecusado e o roteiro HTTP. Aprovar
-deixa a OS em AguardandoPagamento, sem criar cobranca nem liberar reparo.
+deixa inicialmente a OS em AguardandoPagamento. O incremento de pagamento mock
+agora completa a parte financeira, sem liberar reparo.
+
+## Pagamento mock
+
+O [guia de pagamento mock](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/05-pagamento-mock.md)
+descreve o provedor ficticio em tools/OficinaMecanica.PagamentoMock, a obtencao
+de token e os modos approved/rejected/unavailable. Ele e ferramenta de teste
+no mesmo repositorio, nao um quarto servico de negocio.
+
+O use case depende de IPagamentoProvedorGateway; HttpClient e credenciais ficam
+em Infrastructure. Pendencia/inbox sao gravadas antes do HTTP; resultado e
+outbox sao gravados juntos depois. A chave e o ID persistido do pagamento.
+Timeout nao e recusa: apos retentativas, resultado desconhecido exige
+reconciliacao sem presumir que nao houve cobranca. PagamentoMock:Enabled e
+falso por padrao e habilitado no Compose integrado. O CI testa o mock em processo,
+inclusive reinicio, concorrencia e falha de gravacao depois da resposta HTTP.
 
 O CI inicia tambem ElasticMQ e define `SQS_TEST_ENDPOINT` para testar envio,
 reentrega e confirmacao pelo SDK, sem AWS. Na ausencia dessa variavel apenas
@@ -99,7 +116,7 @@ transacao local, por um unico `SaveChanges`.
 | `Orcamentos` | IDs externos da OS/execucao, diagnostico, total, resposta e versao |
 | `ItensOrcamento` | Tipo, referencia externa, nome, quantidade e preco copiados |
 | `HistoricoOrcamento` | Entrada em cada status, horario UTC e motivo |
-| `Pagamentos` | Intencao de pagamento, valor, moeda BRL e status pendente |
+| `Pagamentos` | Valor, moeda BRL, estado, contexto da Saga, provedor e retentativas |
 
 OS, execucao, servicos e pecas sao apenas referencias por ID, sem chaves
 estrangeiras para bancos de outros servicos. Os dados podem chegar pelo snapshot
@@ -259,9 +276,9 @@ descartavel. Nao e necessario cadastrar Secrets nem usar a AWS.
 
 ## Proximos incrementos
 
-- Pagamento mock autorizado pelo professor, com obtencao de token e chamada ao pagamento.
+- Reconciliacao e compensacoes financeiras; contrato de producao somente se exigido.
 - Envio do orcamento e autorizacao da resposta do cliente.
-- Proximos eventos da Saga: pagamento e compensacoes financeiras.
+- Integracao da liberacao/finalizacao do reparo com a Saga.
 - BDD distribuido, Sonar e bloqueio por cobertura minima de 80%.
 - Kubernetes, Terraform, CD e observabilidade distribuida no New Relic.
 

@@ -50,6 +50,8 @@ public class CobrancaApiFactory : WebApplicationFactory<Program>
                 ["AdminUserSettings:Password"] = "SenhaDosTestes@123",
                 ["Database:ApplyMigrations"] = "false",
                 ["Messaging:Enabled"] = "false"
+                ,
+                ["PagamentoMock:Enabled"] = "false"
             }));
         builder.ConfigureServices(services =>
         {

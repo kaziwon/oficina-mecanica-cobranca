@@ -11,4 +11,8 @@ public class PagamentoResponseDto
     public string Moeda { get; set; } = string.Empty;
     public StatusPagamento Status { get; set; }
     public DateTime CriadoEm { get; set; }
+    public string? ProvedorId { get; set; }
+    public string? CodigoFalha { get; set; }
+    public DateTime? FinalizadoEm { get; set; }
+    public int Tentativas { get; set; }
 }

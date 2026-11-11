@@ -152,7 +152,21 @@ namespace OficinaMecanica.Cobranca.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("CodigoFalha")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
                     b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("ExecucaoId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("FinalizadoEm")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Moeda")
@@ -166,19 +180,44 @@ namespace OficinaMecanica.Cobranca.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("OrdemServicoId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("PedidoPagamentoId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ProvedorId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime?>("ProximaTentativaEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("SagaId")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("varchar(30)");
 
+                    b.Property<int>("Tentativas")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("Valor")
                         .HasPrecision(11, 2)
                         .HasColumnType("decimal(11,2)");
+
+                    b.Property<long>("Versao")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
                     b.HasIndex("OrcamentoId")
                         .IsUnique();
+
+                    b.HasIndex("PedidoPagamentoId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "ProximaTentativaEm");
 
                     b.ToTable("Pagamentos");
                 });

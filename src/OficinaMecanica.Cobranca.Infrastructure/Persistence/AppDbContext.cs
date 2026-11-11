@@ -66,6 +66,12 @@ public class AppDbContext : DbContext
             entity.Property(item => item.Id).ValueGeneratedNever();
             entity.Property(item => item.Valor).HasPrecision(11, 2);
             entity.Property(item => item.Moeda).HasMaxLength(3).IsRequired();
+            entity.Property(item => item.CorrelationId).HasMaxLength(100);
+            entity.Property(item => item.ProvedorId).HasMaxLength(100);
+            entity.Property(item => item.CodigoFalha).HasMaxLength(100);
+            entity.Property(item => item.Versao).IsConcurrencyToken();
+            entity.HasIndex(item => new { item.Status, item.ProximaTentativaEm });
+            entity.HasIndex(item => item.PedidoPagamentoId).IsUnique();
             entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(30);
         });
     }

@@ -13,6 +13,10 @@ public static class PagamentoPresenter
         Valor = output.Valor,
         Moeda = output.Moeda,
         Status = output.Status,
-        CriadoEm = output.CriadoEm
+        CriadoEm = output.CriadoEm,
+        ProvedorId = output.ProvedorId,
+        CodigoFalha = output.CodigoFalha,
+        FinalizadoEm = output.FinalizadoEm,
+        Tentativas = output.Tentativas
     };
 }

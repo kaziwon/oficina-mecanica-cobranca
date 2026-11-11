@@ -13,6 +13,10 @@ public static class PagamentoOutputMapper
         Valor = pagamento.Valor,
         Moeda = pagamento.Moeda,
         Status = pagamento.Status,
-        CriadoEm = pagamento.CriadoEm
+        CriadoEm = pagamento.CriadoEm,
+        ProvedorId = pagamento.ProvedorId,
+        CodigoFalha = pagamento.CodigoFalha,
+        FinalizadoEm = pagamento.FinalizadoEm,
+        Tentativas = pagamento.Tentativas
     };
 }
