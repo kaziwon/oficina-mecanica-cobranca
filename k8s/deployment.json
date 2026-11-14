@@ -1,0 +1,6 @@
+{
+  "service": "cobranca",
+  "solution": "OficinaMecanica.Cobranca.slnx",
+  "host_port": 18103,
+  "node_port": 30103
+}

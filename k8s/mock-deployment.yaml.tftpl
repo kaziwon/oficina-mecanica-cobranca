@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pagamento-mock
+  namespace: "${namespace}"
+  annotations:
+    oficina.fase4/rollout: "${rollout_checksum}"
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: pagamento-mock}
+  template:
+    metadata:
+      labels: {app: pagamento-mock}
+      annotations:
+        checksum/secret: "${secret_checksum}"
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 1654, runAsGroup: 1654, fsGroup: 1654}
+      containers:
+        - name: pagamento-mock
+          image: "${mock_image}"
+          imagePullPolicy: IfNotPresent
+          ports: [{name: http, containerPort: 8080}]
+          envFrom: [{secretRef: {name: payment-mock-secrets}}]
+          env:
+            - {name: ASPNETCORE_ENVIRONMENT, value: Production}
+            - {name: DOTNET_EnableDiagnostics, value: '0'}
+            - {name: Mock__ConnectionString, value: 'Data Source=/data/pagamentos.db;Default Timeout=5'}
+            - {name: Mock__Resultado, value: approved}
+            - {name: Mock__ResultadoEstorno, value: refunded}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          startupProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 10
+          volumeMounts:
+            - {name: data, mountPath: /data}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: payment-mock-data}
