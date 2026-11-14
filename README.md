@@ -330,9 +330,8 @@ Nenhum recurso AWS foi criado nesta etapa.
 
 ## Proximos incrementos
 
-- Envio de notificacoes do orcamento por canal externo, se exigido.
-- Integrar qualidade no CI e configurar Sonar (contas/servicos externos adiados).
-- Kubernetes, Terraform, CD e observabilidade distribuida no New Relic.
+- Validar runner/token e primeira analise do Sonar local; automatizar BDD no CI.
+- Recursos Kubernetes, CD no kind local e observabilidade distribuida no New Relic.
 
 ## Cobertura local
 
@@ -349,3 +348,19 @@ migrations geradas, nao toda a Infrastructure. O BDD dos tres servicos fica em
 Ordens; veja o [guia de qualidade](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/14-testes-qualidade-local.md).
 
 O CI atual apenas valida o codigo; nao publica imagens e nao faz deploy.
+
+O ambiente de entrega da Fase 4 sera LOCAL, em um cluster kind compartilhado,
+nao AWS. Cada servico preserva banco, recursos e CD independentes. Sonar e local
+e New Relic continua externo. A base Terraform fica em oficina-mecanica-infra-local;
+os recursos de Cobranca ficarao neste repositorio. Veja o [guia do cluster local](https://github.com/kaziwon/oficina-mecanica-infra-local/blob/main/docs/16-kubernetes-local.md).
+
+## SonarQube local
+
+O CI passa a exigir pelo menos 80% de cobertura. O novo workflow
+qualidade-local.yml foi preparado para analisar a main no SonarQube Community
+do notebook, somente depois de CI bem-sucedido ou disparo manual na main.
+Usa runner self-hosted macOS com label sonar-local e Secret SONAR_TOKEN deste
+projeto. Runner e token cadastrados; falta validar a primeira analise.
+Nao usa Sonar Cloud e nao executa forks/PRs no runner pessoal. O servidor
+compartilhado e iniciado pelo compose.sonar.yml de oficina-mecanica-infra-local. Veja o
+[guia completo](https://github.com/kaziwon/oficina-mecanica-infra-local/blob/main/docs/15-sonarqube-local.md).
