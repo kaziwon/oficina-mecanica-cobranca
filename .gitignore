@@ -17,3 +17,5 @@ pagamentos-mock.db*
 *.tfstate*
 *.tfplan
 *.tfvars
+*.tfvars.json
+__pycache__/

@@ -321,8 +321,9 @@ a mesma decisao nao gera outra cobranca. Nao acessa o banco de Ordens.
 OrdensAtendimento:Enabled e SecretKey habilitam o atendimento. Fora do Compose
 integrado fica desabilitado por padrao. A chave deve ser exclusiva, com pelo
 menos 32 bytes. O token de servico nao autoriza endpoints administrativos.
-No futuro deploy, a rota interna deve permanecer fora do gateway publico e
-usar rede/transporte protegidos e Secrets, nunca a chave local de exemplo.
+No kind, essa credencial e um Secret privado gerado, nunca a chave do Compose.
+O NodePort e somente loopback e ainda nao ha gateway. Antes de expor na internet,
+a rota interna deve ficar fora do gateway publico e usar transporte protegido.
 
 O [guia central do cliente](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/12-orcamento-cliente.md)
 documenta as rotas publicas em Ordens, configuracao e testes de ponta a ponta.
@@ -330,8 +331,8 @@ Nenhum recurso AWS foi criado nesta etapa.
 
 ## Proximos incrementos
 
-- Validar runner/token e primeira analise do Sonar local; automatizar BDD no CI.
-- Recursos Kubernetes, CD no kind local e observabilidade distribuida no New Relic.
+- Publicar e validar o novo CD no GitHub; automatizar BDD no CI.
+- Observabilidade distribuida no New Relic, metricas/escalabilidade e evidencias.
 
 ## Cobertura local
 
@@ -347,12 +348,29 @@ unidade/integracao, exige as cinco camadas e falha abaixo de 80%. Exclui somente
 migrations geradas, nao toda a Infrastructure. O BDD dos tres servicos fica em
 Ordens; veja o [guia de qualidade](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/14-testes-qualidade-local.md).
 
-O CI atual apenas valida o codigo; nao publica imagens e nao faz deploy.
+O CI valida codigo, cobertura, seguranca do CD e manifestos, sem fazer deploy.
+O workflow separado de CD espera CI e Sonar aprovados para o SHA exato da main,
+tambem em disparos manuais. Precisa de PR e validacao real depois de publicado.
 
-O ambiente de entrega da Fase 4 sera LOCAL, em um cluster kind compartilhado,
+O ambiente de entrega da Fase 4 e LOCAL, em um cluster kind compartilhado,
 nao AWS. Cada servico preserva banco, recursos e CD independentes. Sonar e local
 e New Relic continua externo. A base Terraform fica em oficina-mecanica-infra-local;
-os recursos de Cobranca ficarao neste repositorio. Veja o [guia do cluster local](https://github.com/kaziwon/oficina-mecanica-infra-local/blob/main/docs/16-kubernetes-local.md).
+os recursos de Cobranca ficam neste repositorio. Veja o [guia do cluster local](https://github.com/kaziwon/oficina-mecanica-infra-local/blob/main/docs/16-kubernetes-local.md).
+
+Depois de preparar a base em infra-local, publique somente Cobranca:
+
+```bash
+python3 scripts/deploy_local.py
+```
+
+Swagger: http://127.0.0.1:18103/swagger/index.html. k8s/ contem os manifestos;
+infra/kubernetes/ administra oficina-cobranca, MySQL/PVC, migrations, API e mock
+OAuth/pagamento persistente. O mock nao processa dinheiro real nem tem porta
+no computador. Um Job aplica migrations e encerra antes da API subir, sem HTTP
+ou workers; a API usa ApplyMigrations=false. Falha no Job impede o rollout.
+O login admin usa a senha privada de ~/.local/share/oficina-fase4/secrets/common.json,
+nao a do Compose. O CD nao aplica os modulos nem acessa bancos dos outros servicos.
+Veja o [guia de entrega](https://github.com/kaziwon/oficina-mecanica-infra-local/blob/main/docs/17-deploy-kubernetes-local.md).
 
 ## SonarQube local
 
@@ -360,9 +378,13 @@ O CI passa a exigir pelo menos 80% de cobertura. O novo workflow
 qualidade-local.yml foi preparado para analisar a main no SonarQube Community
 do notebook, somente depois de CI bem-sucedido ou disparo manual na main.
 Usa runner self-hosted macOS com label sonar-local e Secret SONAR_TOKEN deste
-projeto. Runner e token cadastrados; falta validar a primeira analise.
+projeto. Runner e token cadastrados; a primeira analise real passou.
 O runner deve ter Python 3.10+ e Docker Compose disponiveis no PATH. O workflow
 valida essas ferramentas e usa o Python local, sem instalar em /Users/runner.
 Nao usa Sonar Cloud e nao executa forks/PRs no runner pessoal. O servidor
 compartilhado e iniciado pelo compose.sonar.yml de oficina-mecanica-infra-local. Veja o
 [guia completo](https://github.com/kaziwon/oficina-mecanica-infra-local/blob/main/docs/15-sonarqube-local.md).
+
+O workflow entrega-continua-local.yml faz build das imagens da API/mock,
+carrega no kind e espera migrations/rollout. Qualidade/deploy usam um mutex
+compartilhado no notebook para poupar memoria; releases continuam independentes.
