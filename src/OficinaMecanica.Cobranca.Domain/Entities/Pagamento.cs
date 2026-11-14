@@ -18,6 +18,9 @@ public class Pagamento
     public DateTime? FinalizadoEm { get; private set; }
     public DateTime? ProximaTentativaEm { get; private set; }
     public int Tentativas { get; private set; }
+    public int ConsultasReconciliacao { get; private set; }
+    public DateTime? UltimaConsultaReconciliacaoEm { get; private set; }
+    public DateTime? ReconciliadoEm { get; private set; }
     public long Versao { get; private set; } = 1;
 
     private Pagamento() { }
@@ -68,5 +71,19 @@ public class Pagamento
         if (Tentativas >= maxTentativas)
         { Status = StatusPagamento.FalhaRequerIntervencao; FinalizadoEm = agora; ProximaTentativaEm = null; }
         else ProximaTentativaEm = agora.Add(intervalo);
+    }
+
+    public void RegistrarConsulta(bool? aprovado, string? provedorId, DateTime agora)
+    {
+        if (Status != StatusPagamento.FalhaRequerIntervencao)
+            throw new Exceptions.RegraNegocioException("Somente pagamento sem resultado confirmado pode ser reconciliado.");
+        if (aprovado.HasValue && (string.IsNullOrWhiteSpace(provedorId) || provedorId.Length > 100 || provedorId.Any(char.IsControl)))
+            throw new Exceptions.DadosInvalidosException("Identificador do provedor invalido.");
+        ConsultasReconciliacao++; UltimaConsultaReconciliacaoEm = agora; Versao++;
+        // Ausencia no provedor nao comprova recusa e nao autoriza nova cobranca.
+        if (!aprovado.HasValue) return;
+        Status = aprovado.Value ? StatusPagamento.Confirmado : StatusPagamento.Recusado;
+        ProvedorId = provedorId; CodigoFalha = aprovado.Value ? null : "PagamentoRecusado";
+        FinalizadoEm = agora; ReconciliadoEm = agora;
     }
 }

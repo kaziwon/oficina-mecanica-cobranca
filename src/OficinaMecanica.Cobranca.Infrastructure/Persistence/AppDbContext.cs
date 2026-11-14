@@ -11,11 +11,27 @@ public class AppDbContext : DbContext
     public DbSet<ItemOrcamento> ItensOrcamento => Set<ItemOrcamento>();
     public DbSet<HistoricoOrcamento> HistoricoOrcamento => Set<HistoricoOrcamento>();
     public DbSet<Pagamento> Pagamentos => Set<Pagamento>();
+    public DbSet<Estorno> Estornos => Set<Estorno>();
     public DbSet<MensagemInbox> Inbox => Set<MensagemInbox>();
     public DbSet<MensagemOutbox> Outbox => Set<MensagemOutbox>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Estorno>(entity =>
+        {
+            entity.Property(item => item.Id).ValueGeneratedNever();
+            entity.Property(item => item.Valor).HasPrecision(11, 2);
+            entity.Property(item => item.Moeda).HasMaxLength(3).IsRequired();
+            entity.Property(item => item.CorrelationId).HasMaxLength(100).IsRequired();
+            entity.Property(item => item.PagamentoProvedorId).HasMaxLength(100).IsRequired();
+            entity.Property(item => item.ProvedorId).HasMaxLength(100);
+            entity.Property(item => item.CodigoFalha).HasMaxLength(100);
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(40);
+            entity.Property(item => item.Versao).IsConcurrencyToken();
+            entity.HasIndex(item => item.PagamentoId).IsUnique();
+            entity.HasIndex(item => new { item.Status, item.ProximaTentativaEm });
+            entity.HasOne<Pagamento>().WithOne().HasForeignKey<Estorno>(item => item.PagamentoId).OnDelete(DeleteBehavior.Restrict);
+        });
         modelBuilder.Entity<MensagemInbox>(entity =>
         {
             entity.Property(item => item.Id).ValueGeneratedNever();

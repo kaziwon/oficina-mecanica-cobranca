@@ -23,9 +23,33 @@ public static class MensagemValidator
         if (mensagem.Payload.PagamentoId == Guid.Empty || mensagem.Payload.ProvedorId?.Length > 100
             || mensagem.Payload.Moeda?.Length > 3)
             throw new ValidacaoException("Identificacao de pagamento invalida.");
+        var compensacao = mensagem.Type is "CancelarReparoPago" or "ReparoPagoCancelado" or "CancelamentoReparoPagoRecusado"
+            or "SolicitarEstorno" or "EstornoConfirmado" or "EstornoRecusado" or "FalhaProcessamentoEstorno";
+        if (compensacao && (!mensagem.CausationId.HasValue || !mensagem.Payload.ExecucaoId.HasValue
+            || !mensagem.Payload.OrcamentoId.HasValue || !mensagem.Payload.PagamentoId.HasValue
+            || string.IsNullOrWhiteSpace(mensagem.Payload.ProvedorId) || mensagem.Payload.ProvedorId.Any(char.IsControl)
+            || !mensagem.Payload.ValorTotal.HasValue || mensagem.Payload.ValorTotal <= 0 || mensagem.Payload.ValorTotal > 999999999.99m
+            || decimal.Round(mensagem.Payload.ValorTotal.Value, 2) != mensagem.Payload.ValorTotal || mensagem.Payload.Moeda != "BRL"
+            || mensagem.Payload.Diagnostico is not null || mensagem.Payload.Itens is not null || mensagem.Payload.DescricaoSolicitacao is not null
+            || mensagem.Payload.DiagnosticoIniciadoEm.HasValue || mensagem.Payload.DiagnosticoConcluidoEm.HasValue))
+            throw new ValidacaoException("Contrato financeiro da compensacao invalido.");
+        var estorno = mensagem.Type is "SolicitarEstorno" or "EstornoConfirmado" or "EstornoRecusado" or "FalhaProcessamentoEstorno";
+        if (mensagem.Payload.EstornoId == Guid.Empty || mensagem.Payload.EstornoProvedorId?.Length > 100
+            || (mensagem.Payload.EstornoProvedorId?.Any(char.IsControl) ?? false)
+            || (!estorno && (mensagem.Payload.EstornoId.HasValue || mensagem.Payload.EstornoProvedorId is not null))
+            || (estorno && !mensagem.Payload.EstornoId.HasValue))
+            throw new ValidacaoException("Identificacao de estorno invalida.");
         if ((mensagem.Payload.PagamentoId.HasValue || mensagem.Payload.ProvedorId is not null || mensagem.Payload.Moeda is not null)
-            && mensagem.Type is not ("SolicitarPagamento" or "PagamentoConfirmado" or "PagamentoRecusado" or "FalhaProcessamentoPagamento"))
+            && !compensacao
+            && mensagem.Type is not ("SolicitarPagamento" or "PagamentoConfirmado" or "PagamentoRecusado" or "FalhaProcessamentoPagamento"
+                or "LiberarExecucao" or "ExecucaoLiberada" or "LiberacaoExecucaoRecusada" or "ReparoIniciado" or "ReparoConcluido"))
             throw new ValidacaoException("O tipo de mensagem nao admite dados de pagamento.");
+        if (mensagem.Payload.ReparoIniciadoEm.HasValue
+            && (mensagem.Type is not ("ReparoIniciado" or "ReparoConcluido") || mensagem.Payload.ReparoIniciadoEm.Value.Kind != DateTimeKind.Utc))
+            throw new ValidacaoException("O tipo de mensagem nao admite a data de inicio de reparo informada.");
+        if (mensagem.Payload.ReparoConcluidoEm.HasValue
+            && (mensagem.Type != "ReparoConcluido" || mensagem.Payload.ReparoConcluidoEm.Value.Kind != DateTimeKind.Utc))
+            throw new ValidacaoException("O tipo de mensagem nao admite a data de conclusao de reparo informada.");
         if (mensagem.Payload.OrcamentoCriadoEm.HasValue
             && mensagem.Type is not ("OrcamentoAprovado" or "OrcamentoRecusado"))
             throw new ValidacaoException("O tipo de mensagem nao admite a data de criacao do orcamento.");

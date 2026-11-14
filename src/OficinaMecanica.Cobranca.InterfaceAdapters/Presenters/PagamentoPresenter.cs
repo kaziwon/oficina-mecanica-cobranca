@@ -17,6 +17,9 @@ public static class PagamentoPresenter
         ProvedorId = output.ProvedorId,
         CodigoFalha = output.CodigoFalha,
         FinalizadoEm = output.FinalizadoEm,
-        Tentativas = output.Tentativas
+        Tentativas = output.Tentativas,
+        ConsultasReconciliacao = output.ConsultasReconciliacao,
+        UltimaConsultaReconciliacaoEm = output.UltimaConsultaReconciliacaoEm,
+        ReconciliadoEm = output.ReconciliadoEm
     };
 }

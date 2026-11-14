@@ -22,6 +22,96 @@ namespace OficinaMecanica.Cobranca.Infrastructure.Persistence.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("OficinaMecanica.Cobranca.Domain.Entities.Estorno", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("CodigoFalha")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<int>("ConsultasReconciliacao")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("EventoCancelamentoId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("ExecucaoId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("FinalizadoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Moeda")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("varchar(3)");
+
+                    b.Property<Guid>("OrcamentoId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("OrdemServicoId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("PagamentoId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("PagamentoProvedorId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("ProvedorId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime?>("ProximaTentativaEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("ReconciliadoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("SagaId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<int>("Tentativas")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UltimaConsultaReconciliacaoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(11, 2)
+                        .HasColumnType("decimal(11,2)");
+
+                    b.Property<long>("Versao")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PagamentoId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "ProximaTentativaEm");
+
+                    b.ToTable("Estornos");
+                });
+
             modelBuilder.Entity("OficinaMecanica.Cobranca.Domain.Entities.HistoricoOrcamento", b =>
                 {
                     b.Property<Guid>("Id")
@@ -156,6 +246,9 @@ namespace OficinaMecanica.Cobranca.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<int>("ConsultasReconciliacao")
+                        .HasColumnType("int");
+
                     b.Property<string>("CorrelationId")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
@@ -190,6 +283,9 @@ namespace OficinaMecanica.Cobranca.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("ProximaTentativaEm")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<DateTime?>("ReconciliadoEm")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<Guid?>("SagaId")
                         .HasColumnType("char(36)");
 
@@ -200,6 +296,9 @@ namespace OficinaMecanica.Cobranca.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("Tentativas")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("UltimaConsultaReconciliacaoEm")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<decimal>("Valor")
                         .HasPrecision(11, 2)
@@ -266,6 +365,15 @@ namespace OficinaMecanica.Cobranca.Infrastructure.Persistence.Migrations
                     b.HasIndex("PublicadaEm", "CriadaEm");
 
                     b.ToTable("Outbox");
+                });
+
+            modelBuilder.Entity("OficinaMecanica.Cobranca.Domain.Entities.Estorno", b =>
+                {
+                    b.HasOne("OficinaMecanica.Cobranca.Domain.Entities.Pagamento", null)
+                        .WithOne()
+                        .HasForeignKey("OficinaMecanica.Cobranca.Domain.Entities.Estorno", "PagamentoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("OficinaMecanica.Cobranca.Domain.Entities.HistoricoOrcamento", b =>
