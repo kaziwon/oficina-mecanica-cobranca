@@ -31,4 +31,17 @@ public class PagamentosController : ControllerBase
         var pagamento = _controller.ObterPorId(id);
         return pagamento is null ? NotFound() : Ok(pagamento);
     }
+
+    [HttpPost("{id:guid}/reconciliar")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> Reconciliar(Guid id,
+        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] ReconciliacaoRequestDto? request,
+        CancellationToken cancellationToken)
+    {
+        var pagamento = await _controller.Reconciliar(id, cancellationToken);
+        return pagamento is null ? NotFound() : NoContent();
+    }
 }

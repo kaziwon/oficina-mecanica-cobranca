@@ -15,4 +15,7 @@ public class PagamentoOutput
     public string? CodigoFalha { get; set; }
     public DateTime? FinalizadoEm { get; set; }
     public int Tentativas { get; set; }
+    public int ConsultasReconciliacao { get; set; }
+    public DateTime? UltimaConsultaReconciliacaoEm { get; set; }
+    public DateTime? ReconciliadoEm { get; set; }
 }

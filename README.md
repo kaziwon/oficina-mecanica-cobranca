@@ -26,10 +26,10 @@ O worker obtem token e chama um provedor HTTP ficticio, com idempotencia e
 persistencia. O resultado segue para a Saga. Nao movimenta dinheiro nem cria
 Pix/checkout real. A API manual de pendencia nao permite marcar pagamento como pago.
 
-Nesta etapa as APIs sao administrativas. O envio ao cliente, sua autorizacao
-para responder ao orcamento, webhooks reais e as proximas etapas da Saga
-serao implementados depois. Nao ha rota publica de aprovacao
-nem webhook de pagamento sem verificacao.
+As APIs em /api continuam administrativas. O cliente consulta e responde ao
+proprio orcamento por Ordens, que usa os endpoints internos autenticados de
+Cobranca. Envio por canal externo e webhooks reais ainda nao estao implementados.
+Nao ha aprovacao publica sem autenticacao nem webhook de pagamento sem verificacao.
 
 ## Geracao por mensagens
 
@@ -274,12 +274,78 @@ inicia MySQL 8.4 temporario, configura a variavel acima, aplica as migracoes e
 publica a cobertura. As senhas fixas desse job valem somente para esse banco
 descartavel. Nao e necessario cadastrar Secrets nem usar a AWS.
 
+## Estorno mock apos cancelamento confirmado
+
+O comando interno SolicitarEstorno vem de Ordens, somente depois da confirmacao
+de parada do reparo em Execucao. Cobranca valida a prova financeira contra seu
+pagamento local confirmado e cria um Estorno duravel separado. A cobranca
+original permanece Confirmada como historico, sem nova cobranca ou alteracao
+retroativa. GET /api/pagamentos/{pagamentoId}/estorno, com JWT Admin, mostra
+Confirmado, Recusado ou FalhaRequerIntervencao, alem de Pendente.
+
+O worker usa o mesmo client_id -> token OAuth do mock e chama POST /refunds
+com o ID do estorno como chave idempotente. Estado e evento outbox sao atomicos.
+Se a resposta chegou, mas a gravacao falhou, repetir recupera o mesmo resultado,
+sem segunda operacao financeira. Timeout ou resposta divergente nao confirmam
+reembolso; tentativas esgotadas exigem intervencao, sem gerar outra chave.
+O mock aceita apenas estorno integral de cobranca aprovada. Nao ha dinheiro real.
+
+O [guia de compensacao](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/10-compensacao-paga.md)
+documenta mensagens, testes e o status CancelamentoPendente mantido em Ordens
+quando o estorno nao e confirmado. Nao ha endpoint publico para forcar estorno.
+Depois de esgotar tentativas, o Admin pode consultar o resultado original:
+`POST /api/pagamentos/{id}/reconciliar` ou
+`POST /api/pagamentos/{id}/estorno/reconciliar`, sem body ou com `{}`.
+O servidor busca token OAuth e faz somente GET no registro financeiro original.
+Nao recebe status, valor ou ID de provedor do operador e nao faz nova operacao.
+Ausencia no mock mantem intervencao; indisponibilidade retorna 503; pendencia
+ainda em processamento retorna 409. Consulte os mesmos GETs existentes para
+ver contagem/data das consultas e `reconciliadoEm`. Resultado e evento outbox
+sao atomicos. Repetir apos resultado conhecido nao consulta nem publica de novo.
+O [guia de recuperacao](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/13-recuperacao-saga.md)
+detalha testes, eventos atrasados, DLQ e limites.
+
+## Orcamento pelo cliente via Ordens
+
+Ordens verifica cliente ativo e propriedade da OS antes de chamar os endpoints
+de atendimento de Cobranca. O JWT do cliente nao e repassado: a chamada usa
+credencial de servico exclusiva, com expiracao curta e audience restrita.
+GET /internal/orcamentos/{id} e os POSTs /aprovar e /recusar dessa rota exigem
+esse esquema, nao token de administrador ou cliente.
+
+Os use cases conferem OS, execucao, Saga, pedido original, valor e correlacao
+contra o orcamento local. A entidade aplica a mesma regra de aprovacao/recusa
+dos fluxos anteriores. Decisao, historico e evento outbox sao atomicos; repetir
+a mesma decisao nao gera outra cobranca. Nao acessa o banco de Ordens.
+
+OrdensAtendimento:Enabled e SecretKey habilitam o atendimento. Fora do Compose
+integrado fica desabilitado por padrao. A chave deve ser exclusiva, com pelo
+menos 32 bytes. O token de servico nao autoriza endpoints administrativos.
+No futuro deploy, a rota interna deve permanecer fora do gateway publico e
+usar rede/transporte protegidos e Secrets, nunca a chave local de exemplo.
+
+O [guia central do cliente](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/12-orcamento-cliente.md)
+documenta as rotas publicas em Ordens, configuracao e testes de ponta a ponta.
+Nenhum recurso AWS foi criado nesta etapa.
+
 ## Proximos incrementos
 
-- Reconciliacao e compensacoes financeiras; contrato de producao somente se exigido.
-- Envio do orcamento e autorizacao da resposta do cliente.
-- Integracao da liberacao/finalizacao do reparo com a Saga.
-- BDD distribuido, Sonar e bloqueio por cobertura minima de 80%.
+- Envio de notificacoes do orcamento por canal externo, se exigido.
+- Integrar qualidade no CI e configurar Sonar (contas/servicos externos adiados).
 - Kubernetes, Terraform, CD e observabilidade distribuida no New Relic.
+
+## Cobertura local
+
+Na raiz deste servico, apos configurar os bancos locais de teste:
+
+```bash
+dotnet test --configuration Release --settings cobertura.runsettings --collect:"XPlat Code Coverage" --results-directory TestResults/cobertura-atual
+python3 tools/verificar_cobertura.py --servico Cobranca --diretorio TestResults/cobertura-atual
+```
+
+Use uma pasta de resultados nova por execucao. O verificador une linhas de
+unidade/integracao, exige as cinco camadas e falha abaixo de 80%. Exclui somente
+migrations geradas, nao toda a Infrastructure. O BDD dos tres servicos fica em
+Ordens; veja o [guia de qualidade](https://github.com/kaziwon/oficina-mecanica-ordens/blob/main/docs/integracao/14-testes-qualidade-local.md).
 
 O CI atual apenas valida o codigo; nao publica imagens e nao faz deploy.

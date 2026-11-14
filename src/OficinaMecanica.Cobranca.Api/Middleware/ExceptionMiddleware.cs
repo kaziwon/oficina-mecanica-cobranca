@@ -25,6 +25,16 @@ public class ExceptionMiddleware
             _logger.LogWarning(exception, "Conflito ao processar cobranca");
             await EscreverErro(context, 409, exception.Message);
         }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            _logger.LogWarning(exception, "Operacao financeira alterada por outra requisicao");
+            await EscreverErro(context, 409, "Os dados foram alterados. Consulte novamente a operacao.");
+        }
+        catch (IntegracaoPagamentoException exception)
+        {
+            _logger.LogWarning(exception, "Resultado financeiro nao confirmado na consulta");
+            await EscreverErro(context, 503, "Nao foi possivel consultar o provedor. Nenhuma nova operacao foi solicitada.");
+        }
         catch (DbUpdateException exception)
         {
             _logger.LogError(exception, "Falha ao persistir cobranca");

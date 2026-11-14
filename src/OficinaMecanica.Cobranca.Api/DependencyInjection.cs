@@ -56,6 +56,10 @@ public static class DependencyInjection
                 };
             });
         services.AddAuthorization();
+        Authentication.OrdensAtendimentoAuthentication.Adicionar(services, configuration);
+        services.AddScoped<ObterOrcamentoAtendimentoUseCase>();
+        services.AddScoped<ResponderOrcamentoAtendimentoUseCase>();
+        services.AddScoped<OrcamentoAtendimentoCleanController>();
         services.AddOptions<PagamentoMockSettings>().Bind(configuration.GetSection("PagamentoMock"))
             .Validate(settings => !settings.Enabled || (Uri.TryCreate(settings.BaseUrl, UriKind.Absolute, out var uri)
                 && uri.Scheme is "http" or "https" && string.IsNullOrEmpty(uri.UserInfo)
@@ -69,12 +73,35 @@ public static class DependencyInjection
             http.Timeout = TimeSpan.FromSeconds(8);
         });
         services.AddScoped<IPagamentoProvedorGateway, PagamentoProvedorGateway>();
+        services.AddScoped<IConsultaFinanceiraGateway, ConsultaFinanceiraGateway>();
+        services.AddHttpClient<IConsultaFinanceiraSource, HttpConsultaFinanceiraMockSource>((provider, http) =>
+        {
+            var settings = provider.GetRequiredService<IOptions<PagamentoMockSettings>>().Value;
+            if (settings.Enabled) http.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
+            http.Timeout = TimeSpan.FromSeconds(8);
+        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+        services.AddScoped<ReconciliarPagamentoUseCase>();
+        services.AddScoped<ReconciliarEstornoUseCase>();
         services.AddScoped<IPagamentoIntegracaoDataSource, EfPagamentoIntegracaoDataSource>();
         services.AddScoped<IPagamentoIntegracaoGateway, PagamentoIntegracaoGateway>();
         services.AddScoped<IPagamentoProcessamentoDataSource, EfPagamentoProcessamentoDataSource>();
         services.AddScoped<IPagamentoProcessamentoGateway, PagamentoProcessamentoGateway>();
         services.AddScoped<SolicitarPagamentoUseCase>();
         services.AddScoped<ProcessarPagamentoUseCase>();
+        services.AddScoped<IEstornoDataSource, EfEstornoDataSource>();
+        services.AddScoped<IEstornoGateway, EstornoGateway>();
+        services.AddScoped<IEstornoProvedorGateway, EstornoProvedorGateway>();
+        services.AddScoped<SolicitarEstornoUseCase>();
+        services.AddScoped<ProcessarEstornoUseCase>();
+        services.AddScoped<ObterEstornoUseCase>();
+        services.AddScoped<EstornosCleanController>();
+        services.AddHttpClient<IEstornoProvedorSource, HttpEstornoMockSource>((provider, http) =>
+        {
+            var settings = provider.GetRequiredService<IOptions<PagamentoMockSettings>>().Value;
+            if (settings.Enabled) http.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
+            http.Timeout = TimeSpan.FromSeconds(8);
+        });
+        services.AddHostedService<EstornoWorker>();
         services.AddHostedService<PagamentoWorker>();
         services.Configure<MessagingSettings>(configuration.GetSection("Messaging"));
         services.AddSingleton<SqsTransport>();

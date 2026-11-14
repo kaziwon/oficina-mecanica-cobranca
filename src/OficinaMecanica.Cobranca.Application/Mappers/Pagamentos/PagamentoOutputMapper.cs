@@ -17,6 +17,9 @@ public static class PagamentoOutputMapper
         ProvedorId = pagamento.ProvedorId,
         CodigoFalha = pagamento.CodigoFalha,
         FinalizadoEm = pagamento.FinalizadoEm,
-        Tentativas = pagamento.Tentativas
+        Tentativas = pagamento.Tentativas,
+        ConsultasReconciliacao = pagamento.ConsultasReconciliacao,
+        UltimaConsultaReconciliacaoEm = pagamento.UltimaConsultaReconciliacaoEm,
+        ReconciliadoEm = pagamento.ReconciliadoEm
     };
 }

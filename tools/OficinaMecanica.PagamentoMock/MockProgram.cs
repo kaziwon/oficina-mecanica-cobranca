@@ -11,12 +11,16 @@ public partial class MockProgram
         builder.Logging.ClearProviders(); builder.Logging.AddJsonConsole(options => options.IncludeScopes = true);
         builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow);
         builder.Services.AddOptions<MockSettings>().Bind(builder.Configuration.GetSection("Mock"))
-            .Validate(settings => settings.Resultado is "approved" or "rejected" or "unavailable"
+            .Validate(settings => settings.Resultado is "approved" or "rejected" or "unavailable" or "approved_response_lost"
+                && settings.ResultadoEstorno is "refunded" or "rejected" or "unavailable" or "refunded_response_lost"
                 && !string.IsNullOrWhiteSpace(settings.ClientId) && !string.IsNullOrWhiteSpace(settings.ClientSecret)
                 && !string.IsNullOrWhiteSpace(settings.Token), "Configure o mock local de pagamento.").ValidateOnStart();
         builder.Services.AddSingleton<MockPaymentStore>();
+        builder.Services.AddSingleton<MockRefundStore>();
         var app = builder.Build();
         app.Services.GetRequiredService<MockPaymentStore>().Initialize();
+        app.Services.GetRequiredService<MockRefundStore>().Initialize();
+        MockRefundEndpoints.Map(app);
         app.MapGet("/health", () => Results.Ok(new { status = "Healthy", mock = true }));
         app.MapPost("/oauth/token", (TokenRequest input, IOptions<MockSettings> configured) =>
         {
@@ -38,7 +42,12 @@ public partial class MockProgram
             var existing = store.Find(key);
             if (existing is not null && existing.Amount != input.Amount) return Results.Conflict();
             if (existing is null && settings.Resultado == "unavailable") return Results.StatusCode(503);
-            try { return Response(existing ?? store.GetOrCreate(key, input.Amount, settings.Resultado, correlation)); }
+            try
+            {
+                var lost = settings.Resultado == "approved_response_lost";
+                var saved = existing ?? store.GetOrCreate(key, input.Amount, lost ? "approved" : settings.Resultado, correlation);
+                return lost ? Results.StatusCode(503) : Response(saved);
+            }
             catch (InvalidOperationException) { return Results.Conflict(); }
         });
         app.MapGet("/payments/{id:guid}", (Guid id, HttpContext context, IOptions<MockSettings> configured, MockPaymentStore store) =>

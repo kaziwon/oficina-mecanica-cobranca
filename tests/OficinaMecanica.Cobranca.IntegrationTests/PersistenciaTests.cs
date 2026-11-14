@@ -57,11 +57,12 @@ public class PersistenciaTests
     public void ModeloMySql_PossuiMigracaoEIndicesUnicos()
     {
         using var database = new AppDbContextFactory().CreateDbContext([]);
-        Assert.Equal(4, database.Database.GetMigrations().Count());
+        Assert.Equal(6, database.Database.GetMigrations().Count());
         var sql = database.Database.GenerateCreateScript();
         Assert.Contains("decimal(11,2)", sql);
         Assert.Contains("UNIQUE INDEX `IX_Orcamentos_OrdemServicoId`", sql);
         Assert.Contains("UNIQUE INDEX `IX_Pagamentos_OrcamentoId`", sql);
+        Assert.Contains("UNIQUE INDEX `IX_Estornos_PagamentoId`", sql);
     }
 
     private static Orcamento NovoOrcamento() => Orcamento.Criar(Guid.NewGuid(), Guid.NewGuid(), "Diagnostico",
