@@ -2,7 +2,7 @@
 
 Microsservico responsavel pelos orcamentos e pagamentos. Usa MySQL exclusivo e
 nao acessa os bancos de Ordens ou Execucao. Os repositorios da Fase 3 permanecem
-intactos.
+intactos. 
 
 ## Escopo deste primeiro incremento
 
