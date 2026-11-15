@@ -329,10 +329,25 @@ O [guia central do cliente](https://github.com/kaziwon/oficina-mecanica-ordens/b
 documenta as rotas publicas em Ordens, configuracao e testes de ponta a ponta.
 Nenhum recurso AWS foi criado nesta etapa.
 
+## Observabilidade no New Relic
+
+A imagem contem o agente .NET fixado e sua instrumentacao XML, sem pacote New
+Relic nas camadas internas. No kind, o deploy le a configuracao privada comum
+de infra-local e habilita APM, logs JSON encaminhados e tracing de HTTP/SQS.
+Sem configuracao, o profiler fica desligado. A entidade deste servico e
+oficina-fase4-cobranca; o cluster aparece como oficina-fase4.
+
+SagaId/CorrelationId permitem acompanhar uma OS entre etapas e traces diferentes.
+A outbox nao guarda o contexto HTTP original: nao se trata de um unico trace
+de longa duracao do cadastro ate a entrega. As transacoes de publicacao/consumo
+e seus headers sao instrumentados sem mudar o envelope JSON das mensagens.
+O [guia de observabilidade](https://github.com/kaziwon/oficina-mecanica-infra-local/blob/main/docs/18-observabilidade-new-relic.md)
+explica habilitacao, seguranca, consultas NRQL e verificacao no site.
+
 ## Proximos incrementos
 
-- Publicar e validar o novo CD no GitHub; automatizar BDD no CI.
-- Observabilidade distribuida no New Relic, metricas/escalabilidade e evidencias.
+- Publicar e validar esta alteracao de observabilidade no CI; automatizar BDD no CI.
+- Metrics-server/HPA e evidencias/documentacao finais.
 
 ## Cobertura local
 
@@ -350,7 +365,8 @@ Ordens; veja o [guia de qualidade](https://github.com/kaziwon/oficina-mecanica-o
 
 O CI valida codigo, cobertura, seguranca do CD e manifestos, sem fazer deploy.
 O workflow separado de CD espera CI e Sonar aprovados para o SHA exato da main,
-tambem em disparos manuais. Precisa de PR e validacao real depois de publicado.
+tambem em disparos manuais. A primeira execucao real passou no GitHub; cada
+alteracao nova precisa novamente de PR e checks do proprio SHA.
 
 O ambiente de entrega da Fase 4 e LOCAL, em um cluster kind compartilhado,
 nao AWS. Cada servico preserva banco, recursos e CD independentes. Sonar e local

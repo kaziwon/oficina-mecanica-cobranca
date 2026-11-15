@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension xmlns="urn:newrelic-extension">
+  <instrumentation>
+    <tracerFactory name="NewRelic.Agent.Core.Tracer.Factories.BackgroundThreadTracerFactory" metricName="Saga/PublicarMensagem">
+      <match assemblyName="OficinaMecanica.Cobranca.Api" className="OficinaMecanica.Cobranca.Messaging.IntegracaoWorker">
+        <exactMethodMatcher methodName="PublicarMensagem" />
+      </match>
+    </tracerFactory>
+    <tracerFactory name="NewRelic.Agent.Core.Tracer.Factories.BackgroundThreadTracerFactory" metricName="Saga/ReceberEProcessar">
+      <match assemblyName="OficinaMecanica.Cobranca.Api" className="OficinaMecanica.Cobranca.Messaging.IntegracaoWorker">
+        <exactMethodMatcher methodName="ReceberEProcessar" />
+      </match>
+    </tracerFactory>
+    <tracerFactory name="NewRelic.Agent.Core.Tracer.Factories.BackgroundThreadTracerFactory" metricName="Pagamento/Cobrar">
+      <match assemblyName="OficinaMecanica.Cobranca.Infrastructure" className="OficinaMecanica.Cobranca.Infrastructure.Sources.HttpPagamentoMockSource">
+        <exactMethodMatcher methodName="Cobrar" />
+      </match>
+    </tracerFactory>
+    <tracerFactory name="NewRelic.Agent.Core.Tracer.Factories.BackgroundThreadTracerFactory" metricName="Pagamento/Estornar">
+      <match assemblyName="OficinaMecanica.Cobranca.Infrastructure" className="OficinaMecanica.Cobranca.Infrastructure.Sources.HttpEstornoMockSource">
+        <exactMethodMatcher methodName="Estornar" />
+      </match>
+    </tracerFactory>
+    <tracerFactory name="NewRelic.Agent.Core.Tracer.Factories.BackgroundThreadTracerFactory" metricName="Pagamento/Consultar">
+      <match assemblyName="OficinaMecanica.Cobranca.Infrastructure" className="OficinaMecanica.Cobranca.Infrastructure.Sources.HttpConsultaFinanceiraMockSource">
+        <exactMethodMatcher methodName="Consultar" />
+      </match>
+    </tracerFactory>
+  </instrumentation>
+</extension>
